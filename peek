@@ -1,0 +1,15 @@
+#!/bin/sh
+set -euo
+
+usage(){
+printf "script [-h]
+-h: print this help section."
+}
+
+while getopts 'h' flag; do
+  case "${flag}" in
+    h) usage ;;
+    *) usage ;;
+  esac
+done
+
