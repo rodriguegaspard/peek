@@ -1,2 +1,2 @@
 # peek
-Extremely simple YouTube browser on the terminal
+Simple and minimal YouTube browser for the terminal. Uses ```yt-dlp```.
