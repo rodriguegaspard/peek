@@ -1,15 +1,29 @@
 #!/bin/sh
-set -euo
+#set -euo
+
+NUMBER_OF_RESULTS=50
+EXTRACTOR="ytsearch"
+
+search(){
+  yt-dlp --flat-playlist "$EXTRACTOR$NUMBER_OF_RESULTS:$1" --print "%(webpage_url)s - %(title)s - %(uploader)s - %(duration_string)s - %(view_count)s"
+}
 
 usage(){
-printf "script [-h]
+printf "peek [-h] query
 -h: print this help section."
 }
 
 while getopts 'h' flag; do
   case "${flag}" in
     h) usage ;;
-    *) usage ;;
+    *) exit 1 ;;
   esac
 done
 
+shift $((OPTIND-1))
+if [ -n "$1" ]; then
+  search "$1"
+else
+  echo "ERROR: No search query specified"
+  exit 1
+fi
