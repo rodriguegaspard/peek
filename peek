@@ -42,18 +42,27 @@ youtube_sp_parameter(){
     "newest") SP_PARAMETER="CAISAhAB" ;;
     "views")  SP_PARAMETER="CAMSAhAB" ;;
     "rating") SP_PARAMETER="CAESAhAB" ;;
-    *) SP_PARAMETER="EgIQAQ%253D%253D" ;;
+    *)        SP_PARAMETER="EgIQAQ%253D%253D" ;;
+  esac
+}
+
+max_results(){
+  case "${1}" in
+  ''|*[!0-9]*) echo "ERROR: -n flag only accepts a valid integer." && exit 0 ;;
+  *) MAX_RESULTS="$1" ;;
   esac
 }
 
 usage(){
   printf "peek [-h] query
-  -p: optional sp parameter for YouTube search (hour, today, week, month, year, video, live, short, long, local, newest, views, rating)
+  -n: number of results to display (defaults to 10).
+  -p: optional sp parameter for YouTube search (hour, today, week, month, year, video, live, short, long, local, newest, views, rating).
   -h: print this help section."
 }
 
-while getopts 'p:h' flag; do
+while getopts 'n:p:h' flag; do
   case "${flag}" in
+    n) max_results "$OPTARG" ;;
     p) youtube_sp_parameter "$OPTARG" ;;
     h) usage ;;
     *) exit 1 ;;
