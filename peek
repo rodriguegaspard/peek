@@ -6,7 +6,7 @@ SP_PARAMETER="EgIQAQ%253D%253D"
 basic_youtube_search(){
   QUERY_URL="https://www.youtube.com/results?search_query="
   QUERY=$(printf %s "$1" | jq -sRr @uri)
-  RESPONSE=$(curl -s --compressed "$QUERY_URL$QUERY&sp=$SP_PARAMETER" | perl -0777 -ne 'print $1 if /var ytInitialData = (.*?);\s*<\/script>/s')
+  RESPONSE=$(curl -s --compressed "$QUERY_URL$QUERY&sp=$SP_PARAMETER&hl=en&gl=US" | perl -0777 -ne 'print $1 if /var ytInitialData = (.*?);\s*<\/script>/s')
   JSON=$(echo "$RESPONSE" | jq -r --argjson limit "$MAX_RESULTS" '
   [
   .. | objects |
