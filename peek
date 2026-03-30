@@ -1,57 +1,74 @@
 #!/bin/sh
 
-MAX_RESULTS=10
+MAX_RESULTS=20
 SP_PARAMETER="EgIQAQ%253D%253D"
 
-basic_youtube_search(){
+youtube_search(){
   QUERY_URL="https://www.youtube.com/results?search_query="
   QUERY=$(printf %s "$1" | jq -sRr @uri)
-  RESPONSE=$(curl -s --compressed "$QUERY_URL$QUERY&sp=$SP_PARAMETER&hl=en&gl=US" | perl -0777 -ne 'print $1 if /var ytInitialData = (.*?);\s*<\/script>/s')
-  JSON=$(echo "$RESPONSE" | jq -r --argjson limit "$MAX_RESULTS" '
-  [
-  .. | objects |
-    select(has("videoRenderer")) |
-    .videoRenderer | {
-      title: .title.runs[0].text,
-        url: ("https://www.youtube.com/watch?v=" + .videoId),
-        author: .longBylineText.runs[0].text,
-        published: .publishedTimeText.simpleText,
-        duration: .lengthText.simpleText,
-        views: .viewCountText.simpleText
+  RESULTS_PER_PAGE=20
+  RESULT=""
+  for PAGE in $(seq 0 $(( (MAX_RESULTS - 1) / RESULTS_PER_PAGE ))); do
+    PAGE_PARAMETER=""
+    if [ "$PAGE" -gt 0 ]; then
+      PAGE_PARAMETER="&p=$((PAGE + 1))"
+    fi
+    RESPONSE=$(curl -s --compressed "$QUERY_URL$QUERY&sp=$SP_PARAMETER&hl=en&gl=US$PAGE_PARAMETER" | perl -0777 -ne 'print $1 if /var ytInitialData = (.*?);\s*<\/script>/s')
+    JSON=$(echo "$RESPONSE" | jq -r --argjson limit "$MAX_RESULTS" '
+    [
+    .. | objects |
+      select(has("videoRenderer")) |
+      .videoRenderer | {
+        title: .title.runs[0].text,
+            url: ("https://www.youtube.com/watch?v=" + .videoId),
+            author: .longBylineText.runs[0].text,
+            published: .publishedTimeText.simpleText,
+            duration: .lengthText.simpleText,
+            views: .viewCountText.simpleText
+          }
+        ] | .[:$limit] | (
+          ["TITLE", "URL", "AUTHOR", "PUBLISHED", "DURATION", "VIEWS"],
+          (.[] | [.title, .url, .author, .published, .duration, .views])
+          ) | @tsv
+          ' 2>/dev/null)
+          if [ -z "$RESULT" ]; then
+            RESULT="$JSON"
+          elif [ "$JSON" != "TITLE\tURL\tAUTHOR\tPUBLISHED\tDURATION\tVIEWS" ] && [ -n "$JSON" ]; then
+            RESULT=$(printf '%s\n%s' "$RESULT" "$(echo "$JSON" | tail -n +2)")
+          fi
+          RESULT_COUNT=$(echo "$JSON" | tail -n +2 | wc -l)
+          if [ "$RESULT_COUNT" -lt "$RESULTS_PER_PAGE" ]; then
+            break
+          fi
+        done
+        printf '%s' "$RESULT" | column -t -s "$(printf '\t')"
       }
-    ] | .[:$limit] | (
-      ["TITLE", "URL", "AUTHOR", "PUBLISHED", "DURATION", "VIEWS"],
-      (.[] | [.title, .url, .author, .published, .duration, .views])
-      ) | @tsv
-      ' 2>/dev/null)
-  printf '%s\n' "$JSON" | column -t -s "$(printf '\t')"
-}
 
-youtube_sp_parameter(){
-  case "$1" in
-    "hour")   SP_PARAMETER="EgIIAQ%253D%253D" ;;
-    "today")  SP_PARAMETER="EgIIAg%253D%253D" ;;
-    "week")   SP_PARAMETER="EgIIAw%253D%253D" ;;
-    "month")  SP_PARAMETER="EgIIBA%253D%253D" ;;
-    "year")   SP_PARAMETER="EgIIBQ%253D%253D" ;;
-    "video")  SP_PARAMETER="EgIQAQ%253D%253D" ;;
-    "live")   SP_PARAMETER="EgJAAQ%253D%253D" ;;
-    "short")  SP_PARAMETER="EgQQARgB" ;;
-    "long")   SP_PARAMETER="EgQQARgC" ;;
-    "local")  SP_PARAMETER="EgO4AQ%253D%253D" ;;
-    "newest") SP_PARAMETER="CAISAhAB" ;;
-    "views")  SP_PARAMETER="CAMSAhAB" ;;
-    "rating") SP_PARAMETER="CAESAhAB" ;;
-    *)        SP_PARAMETER="EgIQAQ%253D%253D" ;;
-  esac
-}
+    youtube_sp_parameter(){
+      case "$1" in
+        "hour")   SP_PARAMETER="EgIIAQ%253D%253D" ;;
+        "today")  SP_PARAMETER="EgIIAg%253D%253D" ;;
+        "week")   SP_PARAMETER="EgIIAw%253D%253D" ;;
+        "month")  SP_PARAMETER="EgIIBA%253D%253D" ;;
+        "year")   SP_PARAMETER="EgIIBQ%253D%253D" ;;
+        "video")  SP_PARAMETER="EgIQAQ%253D%253D" ;;
+        "live")   SP_PARAMETER="EgJAAQ%253D%253D" ;;
+        "short")  SP_PARAMETER="EgQQARgB" ;;
+        "long")   SP_PARAMETER="EgQQARgC" ;;
+        "local")  SP_PARAMETER="EgO4AQ%253D%253D" ;;
+        "newest") SP_PARAMETER="CAISAhAB" ;;
+        "views")  SP_PARAMETER="CAMSAhAB" ;;
+        "rating") SP_PARAMETER="CAESAhAB" ;;
+        *)        SP_PARAMETER="EgIQAQ%253D%253D" ;;
+      esac
+    }
 
-max_results(){
-  case "${1}" in
-  ''|*[!0-9]*) echo "ERROR: -n flag only accepts a valid integer." && exit 0 ;;
-  *) MAX_RESULTS="$1" ;;
-  esac
-}
+  max_results(){
+    case "${1}" in
+      ''|*[!0-9]*) echo "ERROR: -n flag only accepts a valid integer." && exit 0 ;;
+      *) MAX_RESULTS="$1" ;;
+    esac
+  }
 
 usage(){
   printf "peek [-h] query
@@ -71,7 +88,7 @@ done
 
 shift $((OPTIND-1))
 if [ -n "$1" ]; then
-  basic_youtube_search "$1"
+  youtube_search "$1"
 else
   echo "ERROR: No search query specified"
   exit 1
