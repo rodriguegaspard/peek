@@ -72,7 +72,7 @@ youtube_search(){
 
 usage(){
   printf "peek [-h] query
-  -n: number of results to display (defaults to 10).
+  -n: number of results to display (defaults to 20).
   -p: optional sp parameter for YouTube search (hour, today, week, month, year, video, live, short, long, local, newest, views, rating).
   -h: print this help section."
 }
