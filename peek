@@ -36,12 +36,21 @@ youtube_search(){
           break
         fi
     done
-    TABLE=$(echo "$RESULT" | jq -r '
-    ["TITLE", "URL", "AUTHOR", "PUBLISHED", "DURATION", "VIEWS"],
-    (.[] | [.title, .url, .author, .published, .duration, .views])
-    | @tsv
-    ' 2>/dev/null)
-    printf '%s' "$TABLE" | column -t -s "$(printf '\t')"
+    echo "$RESULT"
+}
+
+print_table(){
+  RESULT=$(youtube_search "$1")
+  TABLE=$(echo "$RESULT" | jq -r '
+  ["TITLE", "URL", "AUTHOR", "PUBLISHED", "DURATION", "VIEWS"],
+  (.[] | [.title, .url, .author, .published, .duration, .views])
+  | @tsv
+  ' 2>/dev/null)
+  printf '%s' "$TABLE" | column -t -s "$(printf '\t')"
+}
+
+fzf_mode(){
+  return 1
 }
 
 youtube_sp_parameter(){
@@ -88,7 +97,7 @@ done
 
 shift $((OPTIND-1))
 if [ -n "$1" ]; then
-  youtube_search "$1"
+  print_table "$1"
 else
   echo "ERROR: No search query specified"
   exit 1
