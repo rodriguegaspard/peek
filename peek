@@ -49,8 +49,33 @@ print_table(){
   printf '%s' "$TABLE" | column -t -s "$(printf '\t')"
 }
 
-fzf_mode(){
-  return 1
+youtube_select() {
+    VIDEO_DATA="$(youtube_search "$1")"
+    if [ -z "$VIDEO_DATA" ] || [ "$VIDEO_DATA" = "[]" ]; then
+        echo "No videos found."
+        return 1
+    fi
+    VIDEO_LIST="$(echo "$VIDEO_DATA" | jq -r '.[] | "\(.url)|\(.title)|\(.author)|\(.published)|\(.duration)|\(.views)"')"
+    SELECTED_URLS="$(echo "$VIDEO_LIST" | fzf \
+        --multi \
+        --with-nth=2 \
+        --delimiter='|' \
+        --preview='printf "Title: %b\nAuthor: %b\nPublished: %b\nDuration: %b\nViews: %b\n" {2} {3} {4} {5} {6}' \
+        --preview-window='right:30%:wrap' \
+        --border \
+        --prompt='Select videos (TAB for multiple): ' \
+        --bind='ctrl-a:select-all,ctrl-d:deselect-all' \
+        --header='↑/↓ to navigate | TAB to select | Enter to confirm | Ctrl-A to select all | Ctrl-D to deselect all' \
+        | cut -d'|' -f1)"
+    
+    if [ -z "$SELECTED_URLS" ]; then
+        echo "No videos selected"
+        return 1
+    else
+      printf '%s\n' "$SELECTED_URLS" | while IFS= read -r URL; do
+        mpv "$URL"
+      done
+    fi
 }
 
 youtube_sp_parameter(){
@@ -83,22 +108,30 @@ usage(){
   printf "peek [-h] query
   -n: number of results to display (defaults to 20).
   -p: optional sp parameter for YouTube search (hour, today, week, month, year, video, live, short, long, local, newest, views, rating).
+  -i : interactive mode (requires fzf)
   -h: print this help section."
 }
 
-while getopts 'n:p:h' flag; do
+while getopts 'n:p:ih' flag; do
   case "${flag}" in
     n) max_results "$OPTARG" ;;
     p) youtube_sp_parameter "$OPTARG" ;;
+    i) INTERACTIVE_MODE=true ;;
     h) usage ;;
     *) exit 1 ;;
   esac
 done
 
 shift $((OPTIND-1))
-if [ -n "$1" ]; then
-  print_table "$1"
-else
+
+if [ -z "$1" ]; then
   echo "ERROR: No search query specified"
   exit 1
 fi
+
+if [ "$INTERACTIVE_MODE" = true ]; then
+  youtube_select "$1"
+else
+  print_table "$1"
+fi
+
