@@ -26,49 +26,49 @@ youtube_search(){
             duration: .lengthText.simpleText,
             views: .viewCountText.simpleText
           }
-        ] | .[:$limit] | (
-          ["TITLE", "URL", "AUTHOR", "PUBLISHED", "DURATION", "VIEWS"],
-          (.[] | [.title, .url, .author, .published, .duration, .views])
-          ) | @tsv
-          ' 2>/dev/null)
-          if [ -z "$RESULT" ]; then
-            RESULT="$JSON"
-          elif [ "$JSON" != "TITLE\tURL\tAUTHOR\tPUBLISHED\tDURATION\tVIEWS" ] && [ -n "$JSON" ]; then
-            RESULT=$(printf '%s\n%s' "$RESULT" "$(echo "$JSON" | tail -n +2)")
-          fi
-          RESULT_COUNT=$(echo "$JSON" | tail -n +2 | wc -l)
-          if [ "$RESULT_COUNT" -lt "$RESULTS_PER_PAGE" ]; then
-            break
-          fi
-        done
-        printf '%s' "$RESULT" | column -t -s "$(printf '\t')"
-      }
+        ] | .[:$limit]
+        ' 2>/dev/null)
+        if [ -z "$RESULT" ]; then
+          RESULT="$JSON"
+        fi
+        RESULT_COUNT=$(echo "$JSON" | tail -n +2 | wc -l)
+        if [ "$RESULT_COUNT" -lt "$RESULTS_PER_PAGE" ]; then
+          break
+        fi
+    done
+    TABLE=$(echo "$RESULT" | jq -r '
+    ["TITLE", "URL", "AUTHOR", "PUBLISHED", "DURATION", "VIEWS"],
+    (.[] | [.title, .url, .author, .published, .duration, .views])
+    | @tsv
+    ' 2>/dev/null)
+    printf '%s' "$TABLE" | column -t -s "$(printf '\t')"
+}
 
-    youtube_sp_parameter(){
-      case "$1" in
-        "hour")   SP_PARAMETER="EgIIAQ%253D%253D" ;;
-        "today")  SP_PARAMETER="EgIIAg%253D%253D" ;;
-        "week")   SP_PARAMETER="EgIIAw%253D%253D" ;;
-        "month")  SP_PARAMETER="EgIIBA%253D%253D" ;;
-        "year")   SP_PARAMETER="EgIIBQ%253D%253D" ;;
-        "video")  SP_PARAMETER="EgIQAQ%253D%253D" ;;
-        "live")   SP_PARAMETER="EgJAAQ%253D%253D" ;;
-        "short")  SP_PARAMETER="EgQQARgB" ;;
-        "long")   SP_PARAMETER="EgQQARgC" ;;
-        "local")  SP_PARAMETER="EgO4AQ%253D%253D" ;;
-        "newest") SP_PARAMETER="CAISAhAB" ;;
-        "views")  SP_PARAMETER="CAMSAhAB" ;;
-        "rating") SP_PARAMETER="CAESAhAB" ;;
-        *)        SP_PARAMETER="EgIQAQ%253D%253D" ;;
-      esac
-    }
+youtube_sp_parameter(){
+  case "$1" in
+    "hour")   SP_PARAMETER="EgIIAQ%253D%253D" ;;
+    "today")  SP_PARAMETER="EgIIAg%253D%253D" ;;
+    "week")   SP_PARAMETER="EgIIAw%253D%253D" ;;
+    "month")  SP_PARAMETER="EgIIBA%253D%253D" ;;
+    "year")   SP_PARAMETER="EgIIBQ%253D%253D" ;;
+    "video")  SP_PARAMETER="EgIQAQ%253D%253D" ;;
+    "live")   SP_PARAMETER="EgJAAQ%253D%253D" ;;
+    "short")  SP_PARAMETER="EgQQARgB" ;;
+    "long")   SP_PARAMETER="EgQQARgC" ;;
+    "local")  SP_PARAMETER="EgO4AQ%253D%253D" ;;
+    "newest") SP_PARAMETER="CAISAhAB" ;;
+    "views")  SP_PARAMETER="CAMSAhAB" ;;
+    "rating") SP_PARAMETER="CAESAhAB" ;;
+    *)        SP_PARAMETER="EgIQAQ%253D%253D" ;;
+  esac
+}
 
-  max_results(){
-    case "${1}" in
-      ''|*[!0-9]*) echo "ERROR: -n flag only accepts a valid integer." && exit 0 ;;
-      *) MAX_RESULTS="$1" ;;
-    esac
-  }
+max_results(){
+  case "${1}" in
+    ''|*[!0-9]*) echo "ERROR: -n flag only accepts a valid integer." && exit 0 ;;
+    *) MAX_RESULTS="$1" ;;
+  esac
+}
 
 usage(){
   printf "peek [-h] query
