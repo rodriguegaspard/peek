@@ -24,7 +24,12 @@ youtube_search(){
             author: .longBylineText.runs[0].text,
             published: .publishedTimeText.simpleText,
             duration: .lengthText.simpleText,
-            views: .viewCountText.simpleText
+            views: .viewCountText.simpleText,
+            is_live: (.badges // [] | any(.metadataBadgeRenderer.style == "BADGE_STYLE_TYPE_LIVE_NOW")),
+            is_premiere: (.badges // [] | any(.metadataBadgeRenderer.label == "Premiere")),
+            is_upcoming: (.upcomingEventData != null),
+            upcoming_timestamp: (.upcomingEventData?.startTime // null),
+            concurrent_viewers: (.viewCountText.runs[0].text // null)
           }
         ] | .[:$limit]
         ' 2>/dev/null)
@@ -42,8 +47,21 @@ youtube_search(){
 print_table(){
   RESULT=$(youtube_search "$1")
   TABLE=$(echo "$RESULT" | jq -r '
-  ["TITLE", "URL", "AUTHOR", "PUBLISHED", "DURATION", "VIEWS"],
-  (.[] | [.title, .url, .author, .published, .duration, .views])
+  ["TITLE", "URL", "CHANNEL", "PUBLISHED", "DURATION", "VIEWS"],
+  (.[] | [
+    (.title | if length > 30 then .[0:27] + "..." else . end),
+    .url, 
+    (.author | if length > 30 then .[0:27] + "..." else . end),
+    (if .is_live then "LIVE" 
+     elif .is_premiere then "PREMIERE" 
+     elif .is_upcoming then "UPCOMING"
+     else ".published" end),
+    (if .is_live then "LIVE" 
+     elif .is_premiere then ".upcoming_timestamp"
+     elif .is_upcoming then ".upcoming_timestamp"
+     else ".duration" end),
+    (if .is_live then .concurrent_viewers else .duration end)
+  ])
   | @tsv
   ' 2>/dev/null)
   printf '%s' "$TABLE" | column -t -s "$(printf '\t')"
