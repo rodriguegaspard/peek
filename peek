@@ -55,11 +55,11 @@ print_table(){
     (if .is_live then "LIVE" 
      elif .is_premiere then "PREMIERE" 
      elif .is_upcoming then "UPCOMING"
-     else ".published" end),
+     else .published end),
     (if .is_live then "LIVE" 
-     elif .is_premiere then ".upcoming_timestamp"
-     elif .is_upcoming then ".upcoming_timestamp"
-     else ".duration" end),
+     elif .is_premiere then .upcoming_timestamp
+     elif .is_upcoming then .upcoming_timestamp
+     else .duration end),
     (if .is_live then .concurrent_viewers else .duration end)
   ])
   | @tsv
