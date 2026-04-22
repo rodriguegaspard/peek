@@ -60,7 +60,7 @@ print_table(){
      elif .is_premiere then .upcoming_timestamp
      elif .is_upcoming then .upcoming_timestamp
      else .duration end),
-    (if .is_live then .concurrent_viewers else .duration end)
+    (if .is_live then .concurrent_viewers else .views end)
   ])
   | @tsv
   ' 2>/dev/null)
