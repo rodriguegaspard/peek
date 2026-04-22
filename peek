@@ -73,18 +73,33 @@ youtube_select() {
         echo "No videos found."
         return 1
     fi
-    VIDEO_LIST="$(echo "$VIDEO_DATA" | jq -r '.[] | "\(.url)|\(.title)|\(.author)|\(.published)|\(.duration)|\(.views)"')"
+    DELIMITER="$(printf '\037')"
+    VIDEO_LIST="$(echo "$VIDEO_DATA" | jq -r --arg DELIMITER "$DELIMITER" '
+      .[] | 
+      "\(.url)" + $DELIMITER +
+      "\(.title)" + $DELIMITER +
+      "\(.author)" + $DELIMITER +
+      (if .is_live then "LIVE" 
+       elif .is_premiere then "PREMIERE" 
+       elif .is_upcoming then "UPCOMING"
+       else .published end) + $DELIMITER +
+      (if .is_live then "LIVE" 
+       elif .is_premiere then .upcoming_timestamp
+       elif .is_upcoming then .upcoming_timestamp
+       else .duration end) + $DELIMITER +
+      (if .is_live then .concurrent_viewers else .views end)
+    ')"
     SELECTED_URLS="$(echo "$VIDEO_LIST" | fzf \
         --multi \
         --with-nth=2 \
-        --delimiter='|' \
+        --delimiter="$DELIMITER" \
         --preview='printf "Title: %b\nAuthor: %b\nPublished: %b\nDuration: %b\nViews: %b\n" {2} {3} {4} {5} {6}' \
         --preview-window='right:30%:wrap' \
         --border \
         --prompt='Select videos (TAB for multiple): ' \
         --bind='ctrl-a:select-all,ctrl-d:deselect-all' \
         --header='↑/↓ to navigate | TAB to select | Enter to confirm | Ctrl-A to select all | Ctrl-D to deselect all' \
-        | cut -d'|' -f1)"
+        | cut -d"$(printf '\037')" -f1)"
     
     if [ -z "$SELECTED_URLS" ]; then
         echo "No videos selected"
